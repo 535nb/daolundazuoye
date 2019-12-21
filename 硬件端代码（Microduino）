@@ -1,0 +1,170 @@
+int Sensor1=5;//红外接口D5，此接口用于检测外部
+int Sensor2=8;//红外接口D8，此接口用于检测内部
+int in=0;//用于检测人员进入的全局变量
+int out=0;//用于检测人员外出的全局变量
+int sum=0;//用于检测总人数
+int count=0;//用于检测人流量
+unsigned int perNum=0;
+String  postString;                                //用于存储发送数据的字符串
+String jsonToSend;                                //用于存储发送的json格式参数 in
+char buf[10];
+
+#include <ESP8266.h>   //引入所需库文件
+#include<Wire.h>
+//下列预编译指令用于探测使用的core还是core+以适配不同版本硬件
+#ifdef ESP32
+#error "This code is not recommended to run on the ESP32 platform! Please check your Tools->Board setting."
+#endif
+
+#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1284P__) || defined (__AVR_ATmega644P__) || defined(__AVR_ATmega128RFA1__)
+#define EspSerial Serial1
+#define UARTSPEED  115200
+#endif
+
+#if defined (__AVR_ATmega168__) || defined (__AVR_ATmega328__) || defined (__AVR_ATmega328P__)
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(2, 3); 
+
+#define EspSerial mySerial
+#define UARTSPEED  9600
+#endif
+
+#define SSID        F("accum") //WIFI名称
+#define PASSWORD    F("whaccum285") //WIFI密码
+#define DEVICEID    "577995875" //OneNet上的设备ID
+String apiKey = "4gCh=dQe9wzwP8GxfeCpMnrM=r4=";//与你的设备绑定的APIKey
+#define HOST_NAME   "api.heclouds.com"
+#define HOST_PORT   (80)
+#define INTERVAL_SENSOR   500             //定义传感器采样时间间隔  597000
+#define INTERVAL_NET      30000   
+unsigned long net_time1 = millis();       
+unsigned long lastTime = millis();
+
+ESP8266 wifi(&EspSerial);
+void setup(void)
+{
+  Serial.begin(115200); //在串口监视器中，波特率需要设置为这个值
+  while (!Serial); // wait for Leonardo enumeration, others continue immediately
+  Serial.print(F("setup begin\r\n"));
+  delay(100);
+  WifiInit(EspSerial, UARTSPEED);
+  Serial.print(F("FW Version:"));
+  Serial.println(wifi.getVersion().c_str()); //获取FW Version值
+  if (wifi.setOprToStation()) {
+    Serial.print(F("to station ok\r\n"));
+  } else {
+    Serial.print(F("to station err\r\n"));
+  }
+
+  if (wifi.joinAP(SSID, PASSWORD)) {  //如果连接成功，显示连接成功（Join AP success），以及IP和Mac地址
+    Serial.print(F("Join AP success\r\n"));
+    Serial.print(F("IP:"));
+    Serial.println( wifi.getLocalIP().c_str());
+  } else { //如果连接失败显示连接失败（Join AP success）
+    Serial.print(F("Join AP failure\r\n"));
+  }
+
+  Serial.print(F("setup end\r\n"));
+   pinMode(Sensor1,INPUT);
+   pinMode(Sensor2,INPUT);
+}
+
+void loop(void){
+ int val1 = digitalRead(Sensor1);
+ int val2 = digitalRead(Sensor2);
+   if (val1==1){
+    for(int i=0;i<4;i++){
+      val2 = digitalRead(Sensor2);
+      if(val2==1)
+      {
+      in=1;
+      }
+        delay(500);
+      }
+      if(in==1){
+        sum++;
+        count++;
+        }
+    }
+    //检测到外侧有人时，若内侧在之后1秒内收到信号，则确认有人进门，下文同理
+   else if(val2==1){
+    for(int i=0;i<4;i++){
+      val1 = digitalRead(Sensor1);
+      if(val1==1)
+      {
+      out=1;
+      }
+      delay(500);
+      }
+      if(out==1){
+         sum--;
+        count++;
+      }
+    }
+    else 
+    {
+      delay(2000);
+    }
+    unsigned long net_time1 = 1;//数据上传服务器时间
+    unsigned long sensor_time =1;//传感器采样时间计时器
+    perNum=count*60000/(millis()-lastTime);
+    updateSensorData();
+    if (net_time1 > millis())  net_time1 = millis();
+    if (millis() - net_time1 > INTERVAL_NET)           
+    {        
+        Serial.println("sent data");
+        Serial.println(sum); 
+        Serial.println(in); 
+        Serial.println(out); 
+        net_time1 = millis();
+        lastTime = millis();
+        count=0;
+    }
+    in=0;
+    out=0;//将in，out恢复初始值，开始下一轮计数 
+    }
+    void updateSensorData() {
+      Serial.print("okk");
+  if (wifi.createTCP(HOST_NAME, HOST_PORT)) { //建立TCP连接，如果失败，不能发送该数据
+    Serial.print("create tcp ok\r\n");
+    jsonToSend="{\"Totalnumber:";
+    dtostrf(sum,1,0,buf);
+    jsonToSend+="\""+String(buf)+"\"";
+    jsonToSend+=",\"PerNumber\":";
+    dtostrf(perNum,1,0,buf);                     
+    jsonToSend+="\""+String(buf)+"\"";
+    jsonToSend+="}";
+    postString="POST /devices/";
+    postString+=DEVICEID;
+    postString+="/datapoints?type=3 HTTP/1.1";
+    postString+="\r\n";
+    postString+="api-key:";
+    postString+=apiKey;
+    postString+="\r\n";
+    postString+="Host:api.heclouds.com\r\n";
+    postString+="Connection:close\r\n";
+    postString+="Content-Length:";
+    postString+=jsonToSend.length();
+    postString+="\r\n";
+    postString+="\r\n";
+    postString+=jsonToSend;
+    postString+="\r\n";
+    postString+="\r\n";
+    postString+="\r\n";
+
+  const char *postArray = postString.c_str();                 //将str转化为char数组
+  Serial.println(postArray);
+  wifi.send((const uint8_t*)postArray, strlen(postArray));    //send发送命令，参数必须是这两种格式，尤其是(const uint8_t*)
+  Serial.println("send success");   
+     if (wifi.releaseTCP()) {                                 //释放TCP连接
+        Serial.print("release tcp ok\r\n");
+        } 
+     else {
+        Serial.print("release tcp err\r\n");
+        }
+      postArray = NULL;                                       //清空数组，等待下次传输数据
+  
+  } else {
+    Serial.print("create tcp err\r\n");
+  }
+}
