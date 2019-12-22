@@ -128,10 +128,10 @@ void loop(void){
   if (wifi.createTCP(HOST_NAME, HOST_PORT)) { //建立TCP连接，如果失败，不能发送该数据
     Serial.print("create tcp ok\r\n");
     jsonToSend="{\"Totalnumber\":";
-    dtostrf(sum,1,2,buf);
+    dtostrf(sum,1,0,buf);
     jsonToSend+="\""+String(buf)+"\"";
     jsonToSend+=",\"PerNumber\":";
-    dtostrf(perNum,1,2,buf);                     
+    dtostrf(perNum,1,0,buf);                     
     jsonToSend+="\""+String(buf)+"\"";
     jsonToSend+="}";
    
