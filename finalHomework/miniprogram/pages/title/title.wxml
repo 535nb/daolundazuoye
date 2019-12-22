@@ -1,0 +1,8 @@
+<view class='title'>欢迎来到智能食堂</view>
+<view class='image'><image src='/images/1.jpg'></image></view>
+<view class="title2">点击下面查看食堂情况</view>
+<view class="write">
+  <button class="write-btn" bindtap="navigate">
+    <image class="write-image {{ hoverClass }}" src="/images/2.jpg"/>
+  </button>
+</view>

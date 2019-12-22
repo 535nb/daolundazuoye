@@ -1,0 +1,4 @@
+<canvas class = "canvas" id="chart1"
+canvas-id="Totalnumber"></canvas>
+<canvas class = "canvas" id="chart2"
+canvas-id="PerNumber"></canvas>

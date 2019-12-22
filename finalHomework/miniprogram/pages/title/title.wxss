@@ -1,0 +1,41 @@
+.title{
+color:coral;
+font-weight: bold;
+font-size:25px;
+text-align: center;
+letter-spacing: 1pt;
+margin-top: 40px;
+line-height: 1.5;
+}
+.title2{
+color:rgb(23, 51, 211);
+font-weight: bold;
+font-size:20px;
+text-align: center;
+letter-spacing: 1pt;
+margin-top: 70px;
+line-height: 1.5;
+}
+.image{
+  margin-top: 10px;
+}
+.write {
+  width: 150rpx;
+  height: 150rpx;
+  position: absolute;
+  bottom: 0px;
+  left: calc(50% - 430rpx / 2);
+  text-align: center;
+}
+.write-btn {
+  width: 100rpx;
+  height:100rpx;
+}
+.write-image {
+  width: 100rpx;
+  height: 100rpx;
+}
+
+.write-image-hover {
+  opacity: 0.7;
+}
